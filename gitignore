@@ -1,0 +1,14 @@
+# Go binary files
+/bin/
+/*.exe
+/*.test
+
+# Go build cache
+/.cache/
+
+# Environment files
+.env
+
+# IDE files
+*.idea/
+*.vscode/
