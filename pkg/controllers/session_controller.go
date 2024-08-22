@@ -2,6 +2,8 @@ package controllers
 
 import (
 	"context"
+	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -12,16 +14,29 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-var sessionCollection *mongo.Collection
+var sessionCollection *mongo.Collection // Define a sessionCollection variable
 
 // Initialize the session collection only after MongoDB client is connected
 func SetupSessionCollection() { // Set up the session collection
 	if db.Client == nil { // Check if the client is not initialized
-		panic("MongoDB client is not initialized") // Panic if the client is not initialized
+		err := initializeMongoClient() // Initialize the MongoDB client
+		if err != nil {                // Check if there is an error
+			log.Fatalf("Failed to initialize MongoDB client: %v", err) // Log an error message
+		}
 	}
 	sessionCollection = db.Client.Database("test").Collection("sessions") // Set the sessionCollection variable
+}
+
+func initializeMongoClient() error { // Initialize the MongoDB client
+	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI("mongodb://localhost:27017")) // Connect to MongoDB
+	if err != nil {                                                                                      // Check if there is an error
+		return err // Return the error
+	}
+	db.Client = client // Set the client
+	return nil         // Return nil
 }
 
 func GetSessions(c *gin.Context) { // Get all sessions
@@ -78,9 +93,15 @@ func GetSessionByID(c *gin.Context) { // Get a session by ID
 	c.JSON(http.StatusOK, session) // Return the session
 }
 
-func CreateSession(c *gin.Context) { // Create a new session
-	var session models.Session // Define a session variable
+func CreateSession(c *gin.Context) { // Create a session
+	if sessionCollection == nil { // Check if the session collection is not initialized
+		c.JSON(http.StatusInternalServerError, gin.H{ // Return an error response
+			"error": "MongoDB session collection is not initialized", // Return an error message
+		})
+		return // Return from the function
+	}
 
+	var session models.Session // Define a session variable
 	if err := c.ShouldBindJSON(&session); err != nil { // Bind the JSON data to the session variable
 		c.JSON(http.StatusBadRequest, gin.H{ // Return a bad request response
 			"error": err.Error(), // Return the error message
@@ -92,17 +113,17 @@ func CreateSession(c *gin.Context) { // Create a new session
 	session.UpdatedAt = time.Now() // Set the updated time
 
 	_, err := sessionCollection.InsertOne(context.TODO(), session) // Insert the session
-	if err != nil {                                                // Check if there is an error
+	if err != nil { 											  // Check if there is an error
 		c.JSON(http.StatusInternalServerError, gin.H{ // Return an error response
-			"error": err.Error(), // Return the error message
+			"error": fmt.Sprintf("Failed to create session: %v", err), // Return the error message
 		})
 		return
 	}
 
-	c.JSON(http.StatusCreated, session)
+	c.JSON(http.StatusCreated, session) // Return the created session
 }
 
-func UpdateSession(c *gin.Context) { // Update a session
+func UpdateSession(c *gin.Context) { // Update a session by ID
 	sessionID := c.Param("id") // Get the session ID from the URL
 
 	var session models.Session // Define a session variable
