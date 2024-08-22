@@ -3,40 +3,21 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 
-	"training_session/db"
 	"training_session/pkg/models"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-var sessionCollection *mongo.Collection // Define a sessionCollection variable
+var sessionCollection *mongo.Collection
 
-// Initialize the session collection only after MongoDB client is connected
-func SetupSessionCollection() { // Set up the session collection
-	if db.Client == nil { // Check if the client is not initialized
-		err := initializeMongoClient() // Initialize the MongoDB client
-		if err != nil {                // Check if there is an error
-			log.Fatalf("Failed to initialize MongoDB client: %v", err) // Log an error message
-		}
-	}
-	sessionCollection = db.Client.Database("test").Collection("sessions") // Set the sessionCollection variable
-}
-
-func initializeMongoClient() error { // Initialize the MongoDB client
-	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI("mongodb://localhost:27017")) // Connect to MongoDB
-	if err != nil {                                                                                      // Check if there is an error
-		return err // Return the error
-	}
-	db.Client = client // Set the client
-	return nil         // Return nil
+func InitializeControllers(db *mongo.Database) {
+	sessionCollection = db.Collection("sessions")
 }
 
 func GetSessions(c *gin.Context) { // Get all sessions
@@ -101,7 +82,7 @@ func CreateSession(c *gin.Context) { // Create a session
 		return // Return from the function
 	}
 
-	var session models.Session // Define a session variable
+	var session models.Session                         // Define a session variable
 	if err := c.ShouldBindJSON(&session); err != nil { // Bind the JSON data to the session variable
 		c.JSON(http.StatusBadRequest, gin.H{ // Return a bad request response
 			"error": err.Error(), // Return the error message
@@ -113,7 +94,7 @@ func CreateSession(c *gin.Context) { // Create a session
 	session.UpdatedAt = time.Now() // Set the updated time
 
 	_, err := sessionCollection.InsertOne(context.TODO(), session) // Insert the session
-	if err != nil { 											  // Check if there is an error
+	if err != nil {                                                // Check if there is an error
 		c.JSON(http.StatusInternalServerError, gin.H{ // Return an error response
 			"error": fmt.Sprintf("Failed to create session: %v", err), // Return the error message
 		})
@@ -123,7 +104,7 @@ func CreateSession(c *gin.Context) { // Create a session
 	c.JSON(http.StatusCreated, session) // Return the created session
 }
 
-func UpdateSession(c *gin.Context) { // Update a session by ID
+func UpdateSession(c *gin.Context) { // Update a session
 	sessionID := c.Param("id") // Get the session ID from the URL
 
 	var session models.Session // Define a session variable
@@ -132,16 +113,34 @@ func UpdateSession(c *gin.Context) { // Update a session by ID
 		c.JSON(http.StatusBadRequest, gin.H{ // Return a bad request response
 			"error": err.Error(), // Return the error message
 		})
+		return
+	}
+
+	// Convert the sessionID to an ObjectID
+	objectID, err := primitive.ObjectIDFromHex(sessionID) // Convert the session ID to an ObjectID
+	if err != nil {                                       // Check if there is an error
+		c.JSON(http.StatusBadRequest, gin.H{ // Return a bad request response
+			"error": "Invalid session ID format", // Return an error message
+		})
+		return
+	}
+
+	session.ID = objectID          // Set the session ID to the converted ObjectID
+	session.UpdatedAt = time.Now() // Set the updated time
+
+	// Update the session
+	result, err := sessionCollection.ReplaceOne(context.TODO(), bson.M{"_id": objectID}, session) // Replace the session
+	if err != nil {                                                                               // Check if there is an error
+		c.JSON(http.StatusInternalServerError, gin.H{ // Return an error response
+			"error": err.Error(), // Return the error message
+		})
 		return // Return from the function
 	}
 
-	session.ID, _ = primitive.ObjectIDFromHex(sessionID) // Convert the session ID to an ObjectID
-	session.UpdatedAt = time.Now()                       // Set the updated time
-
-	_, err := sessionCollection.ReplaceOne(context.TODO(), bson.M{"_id": bson.M{"$eq": sessionID}}, session) // Update the session
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{ // Return an error response
-			"error": err.Error(), // Return the error message
+	// Check if any document was modified
+	if result.ModifiedCount == 0 { // Check if the document was not modified
+		c.JSON(http.StatusNotFound, gin.H{ // Return a not found response
+			"error": "No document found with the given ID", // Return an error message
 		})
 		return // Return from the function
 	}
@@ -152,8 +151,17 @@ func UpdateSession(c *gin.Context) { // Update a session by ID
 func DeleteSession(c *gin.Context) { // Delete a session
 	sessionID := c.Param("id") // Get the session ID from the URL
 
-	result, err := sessionCollection.DeleteOne(context.TODO(), bson.M{"_id": bson.M{"$eq": sessionID}}) // Delete the session
-	if err != nil {                                                                                     // Check if there is an error
+	// Convert sessionID from string to primitive.ObjectID
+	objectID, err := primitive.ObjectIDFromHex(sessionID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{ // Return a bad request response
+			"error": "Invalid session ID format", // Return an error message
+		})
+		return // Return from the function
+	}
+
+	result, err := sessionCollection.DeleteOne(context.TODO(), bson.M{"_id": objectID}) // Delete the session
+	if err != nil {                                                                     // Check if there is an error
 		c.JSON(http.StatusInternalServerError, gin.H{ // Return an error response
 			"error": err.Error(), // Return the error message
 		})
@@ -163,7 +171,7 @@ func DeleteSession(c *gin.Context) { // Delete a session
 	if result.DeletedCount == 0 { // Check if the session was not found
 		c.JSON(http.StatusNotFound, gin.H{ // Return a not found response
 			"error": "Session not found", // Return an error message
-		}) // Return from the function
+		})
 		return // Return from the function
 	}
 
