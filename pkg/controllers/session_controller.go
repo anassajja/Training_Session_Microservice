@@ -14,10 +14,10 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-var sessionCollection *mongo.Collection
+var sessionCollection *mongo.Collection // Define a sessionCollection variable
 
-func InitializeControllers(db *mongo.Database) {
-	sessionCollection = db.Collection("sessions")
+func InitializeSession(db *mongo.Database) { // Initialize the controllers
+	sessionCollection = db.Collection("sessions") // Set the session collection
 }
 
 func GetSessions(c *gin.Context) { // Get all sessions
@@ -49,9 +49,18 @@ func GetSessions(c *gin.Context) { // Get all sessions
 func GetSessionByID(c *gin.Context) { // Get a session by ID
 	sessionID := c.Param("id") // Get the session ID from the URL
 
-	var session models.Session                                                                   // Define a session variable
-	result := sessionCollection.FindOne(context.TODO(), bson.M{"_id": bson.M{"$eq": sessionID}}) // Find the session by ID
-	if err := result.Err(); err != nil {                                                         // Check if there is an error
+	// Convert the sessionID from string to ObjectID
+	objectID, err := primitive.ObjectIDFromHex(sessionID) // Convert the session ID to an ObjectID
+	if err != nil {                                       // Check if there is an error
+		c.JSON(http.StatusBadRequest, gin.H{ // Return a bad request response
+			"error": "Invalid session ID format", // Return an error message
+		})
+		return // Return from the function
+	}
+
+	var session models.Session                                                   // Define a session variable
+	result := sessionCollection.FindOne(context.TODO(), bson.M{"_id": objectID}) // Find the session by ID
+	if err := result.Err(); err != nil {                                         // Check if there is an error
 		if err == mongo.ErrNoDocuments { // Check if the session was not found
 			c.JSON(http.StatusNotFound, gin.H{ // Return a not found response
 				"error": "Session not found", // Return an error message

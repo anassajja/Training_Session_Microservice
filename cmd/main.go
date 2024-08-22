@@ -21,8 +21,12 @@ func main() {
 		log.Fatalf("Failed to connect to MongoDB: %v", err) // Log the error message
 	}
 
+	// Log message indicating that the database has been initialized successfully
+	log.Println("Database initialized successfully") // Add this log message
+
 	// Initialize controllers with the database connection
-	controllers.InitializeControllers(database) // Initialize the controllers
+	controllers.InitializeSession(database) // Initialize the controllers
+	controllers.InitializeUser(database)    // Initialize the controllers
 
 	// Set up routes and start the server
 	r := gin.Default()    // Create a new Gin router

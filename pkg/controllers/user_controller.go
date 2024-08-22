@@ -3,7 +3,6 @@ package controllers
 import (
 	"context"
 	"net/http"
-	"training_session/db"
 	"training_session/pkg/models"
 
 	"github.com/gin-gonic/gin"
@@ -14,12 +13,8 @@ import (
 
 var userCollection *mongo.Collection // Define a userCollection variable
 
-// Initialize the user collection only after MongoDB client is connected
-func SetupUserCollection() { // Set up the user collection
-	if db.Client == nil { // Check if the client is not initialized
-		panic("MongoDB client is not initialized") // Panic if the client is not initialized
-	}
-	userCollection = db.Client.Database("test").Collection("users") // Set the userCollection variable
+func InitializeUser(database *mongo.Database) { // Initialize the controllers
+	userCollection = database.Collection("users") // Set the user collection
 }
 
 func GetUsers(c *gin.Context) { // Get all users

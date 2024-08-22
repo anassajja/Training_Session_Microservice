@@ -7,7 +7,6 @@ import ( // Import the required packages
 )
 
 func SetupRoutes(r *gin.Engine) { // Set up the router
-	controllers.SetupUserCollection() // Set up the user collection
 
 	// Add routes for users
 
