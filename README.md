@@ -41,6 +41,7 @@ The server should now be running on http://localhost:8080.
 
 
 ### Testing the API
+### Recommanded to Test API endpoints using Postman Tool 
 
 You can test the API using curl or PowerShell’s Invoke-RestMethod
 
