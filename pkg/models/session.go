@@ -19,6 +19,7 @@ type Session struct { // Define a Session struct
 	Coach        string             `bson:"coach"` // Define a Coach field
 	CoachAssists []string           `bson:"coachAssists"` // Define a CoachAssists field
 	Participants []string           `bson:"participants"` // Define a Participants field
+	Status       string             `bson:"status"` // Add Status field to represent the session status (e.g., "active", "cancelled")
 	CreatedAt    time.Time          `bson:"createdAt"` // Define a CreatedAt field
 	UpdatedAt    time.Time          `bson:"updatedAt"` // Define an UpdatedAt field
 }
