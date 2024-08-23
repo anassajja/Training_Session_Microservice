@@ -16,18 +16,20 @@ func SetupRoutes(r *gin.Engine) { // Set up the router
 	r.DELETE("/users/:id", controllers.DeleteUser) // Add a route to delete a user
 
 	// Refund Route
-	r.POST("/sessions/:userId/:sessionId/refund", controllers.ProcessRefund)
+	// r.POST("/sessions/:userId/:sessionId/refund", controllers.ProcessRefund)
 
 	// Add routes for sessions
 
-	r.POST("/sessions", controllers.CreateSession)       // Add a route to create a new session
-	r.PUT("/sessions/:id", controllers.UpdateSession)    // Add a route to update a session
-	r.GET("/sessions", controllers.GetSessions)          // Add a route to get all sessions
-	r.GET("/sessions/:id", controllers.GetSessionByID)   // Add a route to get a session by ID
-	r.DELETE("/sessions/:id", controllers.DeleteSession) // Add a route to delete a session
+	r.POST("/sessions", controllers.CreateSession)           // Add a route to create a new session
+	r.PUT("/sessions/:id", controllers.UpdateSession)        // Add a route to update a session
+	r.GET("/sessions", controllers.GetSessions)              // Add a route to get all sessions
+	r.GET("/sessions/active", controllers.GetActiveSessions) // Add a route to get all active sessions
+	r.GET("/sessions/:id", controllers.GetSessionByID)       // Add a route to get a session by ID
+	r.GET("/sessions/user/:userId", controllers.GetSessionsByUserID)
 	r.POST("/sessions/:userId/:sessionId/enroll", controllers.EnrollInSession)
-	r.DELETE("/sessions/:userId/:sessionId/cancel", controllers.CancelEnrollment)
-	r.DELETE("/sessions/:id", controllers.CancelSession)
+	r.POST("/sessions/:sessionId/enrollments/:userId/cancel", controllers.CancelEnrollment)
+	r.POST("/sessions/:id/cancel", controllers.CancelSession)
+	r.POST("/sessions/:id/archive", controllers.ArchiveSession) // Route for archiving a session
 
 	// Add routes for invitations
 	r.POST("/invitations", controllers.SendInvitation)                // Add a route to send an invitation
@@ -46,5 +48,24 @@ func SetupRoutes(r *gin.Engine) { // Set up the router
 	r.GET("/feedback/user/:userId", controllers.ViewFeedback) // Route to view feedback submitted by the user
 	r.PUT("/feedback/:id", controllers.EditFeedback)          // Route to edit feedback by ID
 	r.DELETE("/feedback/:id", controllers.DeleteFeedback)     // Route to delete feedback by ID
+
+	// Add routes for Coaches
+	/* 	r.GET("/coaches", controllers.GetCoaches)         // Add a route to get all coaches
+	   	r.POST("/coaches", controllers.RegisterCoach)     // Add a route to create a new coach
+	   	r.PUT("/coaches/:id", controllers.UpdateCoach)    // Add a route to update a coach
+	   	r.DELETE("/coaches/:id", controllers.DeleteCoach) // Add a route to delete a coach */
+
+	// Add routes for Notifications
+	r.POST("/notifications/user", controllers.SendUserNotification) // Send user notifications
+	r.GET("/notifications/:userId", controllers.GetNotifications)   // Get all notifications for a user
+	r.DELETE("/notifications/:id", controllers.DeleteNotification)  // Delete a notification by ID
+
+	// Add routes for Pitch bookings
+	r.POST("/pitches", controllers.BookPitch)                    // Add a route to book a pitch
+	r.GET("/pitches", controllers.GetPitchBookings)              // Add a route to get all pitches
+	r.GET("/pitches/:id", controllers.GetPitchBookingsByPitchID) // Add a route to get a pitch by pitch id
+	r.GET("/pitches/:id", controllers.GetPitchBookingsByUserID)  // Add a route to get a pitch by user id
+	r.PUT("/pitches/:id", controllers.UpdatePitchBooking)        // Add a route to update a pitch booking
+	r.DELETE("/pitches/:id", controllers.DeletePitchBooking)     // Add a route to delete a pitch booking
 
 } // End of the SetupRoutes function

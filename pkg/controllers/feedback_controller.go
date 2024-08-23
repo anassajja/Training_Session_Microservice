@@ -26,9 +26,9 @@ func SubmitFeedback(c *gin.Context) { // Submit feedback for sessions and coache
 		return                                                         // Return from the function
 	}
 
-	feedback.ID = primitive.NewObjectID()   // Generate a new ObjectID for the feedback
-	feedback.CreatedAt = time.Now()         // Set the created_at timestamp
-	feedback.UpdatedAt = feedback.CreatedAt // Set the updated_at timestamp
+	feedback.ID = primitive.NewObjectID() // Generate a new ObjectID for the feedback
+	feedback.CreatedAt = time.Now()       // Set the created_at timestamp
+	feedback.UpdatedAt = time.Now()       // Set the updated_at timestamp
 
 	_, err := feedbackCollection.InsertOne(context.TODO(), feedback) // Insert the feedback
 	if err != nil {                                                  // Check if there is an error
@@ -40,7 +40,7 @@ func SubmitFeedback(c *gin.Context) { // Submit feedback for sessions and coache
 }
 
 // ViewFeedback: Allows users to view feedback they have submitted
-func ViewFeedback(c *gin.Context) {
+func ViewFeedback(c *gin.Context) { // View feedback submitted by a user
 	userID := c.Param("userId") // Get user ID from the URL
 
 	objectUserID, err := primitive.ObjectIDFromHex(userID) // Convert user ID to ObjectID

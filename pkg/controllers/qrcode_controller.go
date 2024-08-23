@@ -26,8 +26,8 @@ func GenerateQRCode(c *gin.Context) { // Generate a QR code for session verifica
 	sessionID := c.Param("sessionId") // Get the session ID from the URL
 
 	// Convert sessionID to ObjectID
-	_, err := primitive.ObjectIDFromHex(sessionID) // Convert the session ID to an ObjectID
-	if err != nil {                                // Check if there is an error converting the ID
+	objectID, err := primitive.ObjectIDFromHex(sessionID) // Convert the session ID to an ObjectID
+	if err != nil {                                       // Check if there is an error converting the ID
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid session ID"}) // Return an error response
 		return                                                              // Return from the function to stop execution
 	}
@@ -42,11 +42,21 @@ func GenerateQRCode(c *gin.Context) { // Generate a QR code for session verifica
 		return                                                                               // Return from the function to stop execution
 	}
 
-	// Return QR code image
+	// Save QR code to session document
+	_, err = qrSessionCollection.UpdateOne( // Update the session document with the QR code
+		context.TODO(),                              // Use the context
+		bson.M{"_id": objectID},                     // Find the session by ID
+		bson.M{"$set": bson.M{"qrCode": qrContent}}, // Update the session with the QR code
+	)
+	if err != nil { // Check if there is an error updating the session
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update session with QR code"}) // Return an error response
+		return                                                                                          // Return from the function to stop execution
+	}
+
 	c.Header("Content-Type", "image/png") // Set the content type to image/png
 	c.Writer.WriteHeader(http.StatusOK)   // Set the status code to 200
 	c.Writer.Write(code)                  // Write the QR code image to the response
-} // GenerateQRCode generates a QR code for session verification
+}
 
 // ValidateQRCode validates the QR code to ensure session integrity
 func ValidateQRCode(c *gin.Context) {

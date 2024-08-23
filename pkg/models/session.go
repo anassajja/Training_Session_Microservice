@@ -6,20 +6,22 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-type Session struct { // Define a Session struct
-	ID           primitive.ObjectID `bson:"_id,omitempty"` // Define an ID field
-	Title        string             `bson:"title"` 	   // Define a Title field
-	Description  string             `bson:"description"`  // Define a Description field
-	StartTime    time.Time          `bson:"startTime"`   // Define a StartTime field
-	EndTime      time.Time          `bson:"endTime"`    // Define an EndTime field
-	Location     string             `bson:"location"`  // Define a Location field
-	TrainingType string             `bson:"trainingType"` // Define a TrainingType field
-	Duration     int                `bson:"duration"` // Define a Duration field
-	Recurrence   string             `bson:"recurrence"` // Define a Recurrence field
-	Coach        string             `bson:"coach"` // Define a Coach field
-	CoachAssists []string           `bson:"coachAssists"` // Define a CoachAssists field
-	Participants []string           `bson:"participants"` // Define a Participants field
-	Status       string             `bson:"status"` // Add Status field to represent the session status (e.g., "active", "cancelled")
-	CreatedAt    time.Time          `bson:"createdAt"` // Define a CreatedAt field
-	UpdatedAt    time.Time          `bson:"updatedAt"` // Define an UpdatedAt field
+// Session represents the structure of a session document in MongoDB.
+type Session struct {
+	ID           primitive.ObjectID `bson:"_id,omitempty" json:"id"`           // Unique identifier for the session
+	Title        string             `bson:"title" json:"title"`                // Title of the session
+	Description  string             `bson:"description" json:"description"`    // Description of the session
+	StartTime    time.Time          `bson:"startTime" json:"start_time"`       // Start time of the session
+	EndTime      time.Time          `bson:"endTime" json:"end_time"`           // End time of the session
+	Location     string             `bson:"location" json:"location"`          // Location of the session
+	TrainingType string             `bson:"trainingType" json:"training_type"` // Type of training
+	Duration     int                `bson:"duration" json:"duration"`          // Duration of the session in minutes
+	Recurrence   string             `bson:"recurrence" json:"recurrence"`      // Recurrence pattern of the session
+	Coach        string             `bson:"coach" json:"coach"`                // Coach for the session
+	CoachAssists []string           `bson:"coachAssists" json:"coach_assists"` // List of assistants for the coach
+	Participants []string           `bson:"participants" json:"participants"`  // List of participants
+	Status       string             `bson:"status" json:"status"`              // Status of the session (e.g., "active", "cancelled")
+	QRCode       string             `bson:"qrCode" json:"qr_code"`             // QR code associated with the session
+	CreatedAt    time.Time          `bson:"createdAt" json:"created_at"`      // Timestamp when the session was created
+	UpdatedAt    time.Time          `bson:"updatedAt" json:"updated_at"`       // Timestamp when the session was last updated
 }

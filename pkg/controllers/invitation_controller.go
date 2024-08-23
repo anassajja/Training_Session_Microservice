@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"net/http"
+	"time"
 	"training_session/pkg/models"
 
 	"github.com/gin-gonic/gin"
@@ -23,6 +24,10 @@ func SendInvitation(c *gin.Context) { // Send an invitation for a private traini
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}) // Return a bad request response
 		return                                                     // Return from the function
 	}
+
+	invitation.ID = primitive.NewObjectID() // Generate a new ObjectID for the invitation
+	invitation.CreatedAt = time.Now()       // Set the created_at timestamp
+	invitation.UpdatedAt = time.Now()       // Set the updated_at timestamp
 
 	_, err := invitationCollection.InsertOne(context.TODO(), invitation) // Insert the invitation
 	if err != nil {                                                      // Check if there is an error
