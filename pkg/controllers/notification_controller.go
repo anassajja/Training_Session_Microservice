@@ -101,7 +101,7 @@ func GetNotifications(c *gin.Context) { // Get notifications for a user
 
 // Delete Notification: Allows users to delete a notification.
 func DeleteNotification(c *gin.Context) { // Delete a notification
-	notificationID := c.Param("id") // Get the notification ID from the URL
+	notificationID := c.Param("notificationId") // Get the notification ID from the URL
 
 	objectNotificationID, err := primitive.ObjectIDFromHex(notificationID) // Convert ID to ObjectID
 	if err != nil {                                                        // Check if there is an error

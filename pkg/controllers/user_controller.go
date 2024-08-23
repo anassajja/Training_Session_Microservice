@@ -10,6 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var (
@@ -47,12 +48,20 @@ func RegisterUser(c *gin.Context) { // Create a user
 		return                                                     // Return from the function
 	}
 
+	// Hash the password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost) // Hash the password
+	if err != nil {                                                                               // Check if there is an error
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"}) // Return an error response
+		return                                                                            // Return from the function
+	}
+	user.Password = string(hashedPassword) // Store the hashed password
+
 	user.ID = primitive.NewObjectID() // Generate a new ObjectID for the user
 	user.CreatedAt = time.Now()       // Set the created_at timestamp
 	user.UpdatedAt = time.Now()       // Set the updated_at timestamp
 
-	_, err := userCollection.InsertOne(context.TODO(), user) // Insert the user
-	if err != nil {                                          // Check if there is an error
+	_, err = userCollection.InsertOne(context.TODO(), user) // Insert the user
+	if err != nil {                                         // Check if there is an error
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()}) // Return an error response
 		return                                                              // Return from the function
 	}
@@ -60,7 +69,7 @@ func RegisterUser(c *gin.Context) { // Create a user
 }
 
 func GetUserByID(c *gin.Context) { // Get a user by ID
-	userID := c.Param("id") // Get the user ID from the URL
+	userID := c.Param("userId") // Get the user ID from the URL
 
 	// Convert userID to ObjectID
 	objectID, err := primitive.ObjectIDFromHex(userID) // Convert the user ID to an ObjectID
@@ -85,8 +94,8 @@ func GetUserByID(c *gin.Context) { // Get a user by ID
 }
 
 func UpdateUser(c *gin.Context) { // Update a user
-	userID := c.Param("id") // Get the user ID from the URL
-	var user models.User    // Define a user variable
+	userID := c.Param("userId") // Get the user ID from the URL
+	var user models.User        // Define a user variable
 
 	// Bind JSON to user struct
 	if err := c.BindJSON(&user); err != nil { // Bind the JSON to the user struct
@@ -101,10 +110,23 @@ func UpdateUser(c *gin.Context) { // Update a user
 		return                                                           // Return from the function
 	}
 
+	// Hash the password if it is being updated
+	if user.Password != "" { // Check if the password is not empty
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost) // Hash the password
+		if err != nil {                                                                               // Check if there is an error
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"}) // Return an error response
+			return
+		}
+		user.Password = string(hashedPassword) // Store the hashed password
+	}
+
 	// Update the user document
-	filter := bson.M{"_id": objectID}                                       // Define the filter
-	update := bson.M{"$set": user}                                          // Define the update
-	result, err := userCollection.UpdateOne(context.TODO(), filter, update) // Update the user
+	user.ID = objectID          // Set the user ID
+	user.UpdatedAt = time.Now() // Set the updated_at timestamp
+
+	filter := bson.M{"_id": objectID}                                       // Define the filter to find the user by ID
+	update := bson.M{"$set": user}                                          // Define the update operation with the new user data (set)
+	result, err := userCollection.UpdateOne(context.TODO(), filter, update) // Update the user document with the new data
 	if err != nil {                                                         // Check if there is an error
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()}) // Return an error response
 		return                                                              // Return from the function
@@ -119,7 +141,7 @@ func UpdateUser(c *gin.Context) { // Update a user
 }
 
 func DeleteUser(c *gin.Context) { // Delete a user
-	userID := c.Param("id") // Get the user ID from the URL
+	userID := c.Param("userId") // Get the user ID from the URL
 
 	// Convert userID to ObjectID
 	objectID, err := primitive.ObjectIDFromHex(userID) // Convert the user ID to an ObjectID
@@ -143,7 +165,6 @@ func DeleteUser(c *gin.Context) { // Delete a user
 
 	c.JSON(http.StatusOK, gin.H{"message": "User deleted successfully"}) // Return a success response
 }
-
 
 /*
 	 func ProcessRefund(c *gin.Context) { // Process a refund for a user

@@ -43,7 +43,7 @@ func GetPitchBookings(c *gin.Context) {
 
 // GetPitchBookingByID retrieves a pitch booking by ID
 func GetPitchBookingByID(c *gin.Context) {
-	pitchBookingID := c.Param("id") // Get the pitch booking ID from the URL
+	pitchBookingID := c.Param("pitchId") // Get the pitch booking ID from the URL
 
 	objectID, err := primitive.ObjectIDFromHex(pitchBookingID) // Convert ID to ObjectID
 	if err != nil {                                            // Check if there is an error
@@ -88,7 +88,7 @@ func BookPitch(c *gin.Context) {
 
 // UpdatePitchBooking updates an existing pitch booking
 func UpdatePitchBooking(c *gin.Context) {
-	pitchBookingID := c.Param("id")      // Get the pitch booking ID from the URL
+	pitchBookingID := c.Param("pitchID") // Get the pitch booking ID from the URL
 	var updatedPitchBooking models.Pitch // Define an updated pitch booking variable
 
 	if err := c.BindJSON(&updatedPitchBooking); err != nil { // Bind the JSON to the updated pitch booking struct
@@ -115,7 +115,7 @@ func UpdatePitchBooking(c *gin.Context) {
 
 // DeletePitchBooking deletes an existing pitch booking
 func DeletePitchBooking(c *gin.Context) {
-	pitchBookingID := c.Param("id") // Get the pitch booking ID from the URL
+	pitchBookingID := c.Param("pitchId") // Get the pitch booking ID from the URL
 
 	objectID, err := primitive.ObjectIDFromHex(pitchBookingID) // Convert ID to ObjectID
 	if err != nil {                                            // Check if there is an error

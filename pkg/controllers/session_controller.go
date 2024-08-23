@@ -73,7 +73,7 @@ func GetActiveSessions(c *gin.Context) { // Get all active sessions
 }
 
 func GetSessionByID(c *gin.Context) { // Get a session by ID
-	sessionID := c.Param("id") // Get the session ID from the URL
+	sessionID := c.Param("sessionId") // Get the session ID from the URL
 
 	// Convert the sessionID from string to ObjectID
 	objectID, err := primitive.ObjectIDFromHex(sessionID) // Convert the session ID to an ObjectID
@@ -110,7 +110,7 @@ func GetSessionByID(c *gin.Context) { // Get a session by ID
 }
 
 func GetSessionsByUserID(c *gin.Context) { // Get all sessions created by a user
-	userID := c.Param("id") // Get the user ID from the URL
+	userID := c.Param("userId") // Get the user ID from the URL
 
 	// Convert the userID from string to ObjectID
 	objectID, err := primitive.ObjectIDFromHex(userID) // Convert the user ID to an ObjectID
@@ -184,9 +184,9 @@ func CreateSession(c *gin.Context) { // Create a session
 	}
 
 	session.ID = primitive.NewObjectID() // Generate a new ObjectID for the session
+	session.Status = "active"            // Set the status to "new"
 	session.CreatedAt = time.Now()       // Set the created time
 	session.UpdatedAt = time.Now()       // Set the updated time
-	session.Status = "active"            // Set the status to "new"
 
 	_, err := sessionCollection.InsertOne(context.TODO(), session) // Insert the session
 	if err != nil {                                                // Check if there is an error
@@ -218,7 +218,7 @@ func CreateSession(c *gin.Context) { // Create a session
 
 // UpdateSession: Updates a session and sends a notification to the creator
 func UpdateSession(c *gin.Context) { // Update a session
-	sessionID := c.Param("id") // Get the session ID from the URL
+	sessionID := c.Param("sessionId") // Get the session ID from the URL
 
 	var session models.Session // Define a session variable
 	var user models.User       // Define a user variable
@@ -372,7 +372,7 @@ func CancelEnrollment(c *gin.Context) { // Cancel user enrollment in a session
 
 // CancelSession: Cancels a session and sends a notification to the creator
 func CancelSession(c *gin.Context) { // Cancel a session
-	sessionID := c.Param("id") // Get the session ID from the URL
+	sessionID := c.Param("sessionId") // Get the session ID from the URL
 
 	// Convert sessionID to ObjectID
 	objectSessionID, err := primitive.ObjectIDFromHex(sessionID) // Convert the session ID to an ObjectID
@@ -423,7 +423,7 @@ func CancelSession(c *gin.Context) { // Cancel a session
 
 // ArchiveSession: Archives a session and sends a notification to the creator
 func ArchiveSession(c *gin.Context) { // Archive a session
-	sessionID := c.Param("id") // Get the session ID from the URL
+	sessionID := c.Param("sessionId") // Get the session ID from the URL
 
 	// Convert sessionID to ObjectID
 	objectSessionID, err := primitive.ObjectIDFromHex(sessionID) // Convert the session ID to an ObjectID

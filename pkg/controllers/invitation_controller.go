@@ -39,7 +39,7 @@ func SendInvitation(c *gin.Context) { // Send an invitation for a private traini
 }
 
 func AcceptInvitation(c *gin.Context) { // Handle user acceptance of session invitations
-	invitationID := c.Param("id") // Get the invitation ID from the URL
+	invitationID := c.Param("invitationId") // Get the invitation ID from the URL
 
 	// Convert invitationID to ObjectID
 	objectID, err := primitive.ObjectIDFromHex(invitationID) // Convert the invitation ID to an ObjectID
@@ -66,7 +66,7 @@ func AcceptInvitation(c *gin.Context) { // Handle user acceptance of session inv
 }
 
 func DeclineInvitation(c *gin.Context) { // Manage user decline of session invitations
-	invitationID := c.Param("id") // Get the invitation ID from the URL
+	invitationID := c.Param("invitationId") // Get the invitation ID from the URL
 
 	// Convert invitationID to ObjectID
 	objectID, err := primitive.ObjectIDFromHex(invitationID) // Convert the invitation ID to an ObjectID
@@ -112,7 +112,7 @@ func GetInvitations(c *gin.Context) { // Get all invitations
 }
 
 func GetInvitationByID(c *gin.Context) { // Get an invitation by ID
-	invitationID := c.Param("id") // Get the invitation ID from the URL
+	invitationID := c.Param("invitationId") // Get the invitation ID from the URL
 
 	objectID, err := primitive.ObjectIDFromHex(invitationID) // Convert ID to ObjectID
 	if err != nil {                                          // Check if there is an error
@@ -135,7 +135,7 @@ func GetInvitationByID(c *gin.Context) { // Get an invitation by ID
 }
 
 func DeleteInvitation(c *gin.Context) { // Delete an invitation
-	invitationID := c.Param("id") // Get the invitation ID from the URL
+	invitationID := c.Param("invitationId") // Get the invitation ID from the URL
 
 	objectID, err := primitive.ObjectIDFromHex(invitationID) // Convert ID to ObjectID
 	if err != nil {                                          // Check if there is an error

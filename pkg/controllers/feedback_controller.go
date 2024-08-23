@@ -72,7 +72,7 @@ func ViewFeedback(c *gin.Context) { // View feedback submitted by a user
 
 // EditFeedback: Handles editing of previously submitted feedback
 func EditFeedback(c *gin.Context) { // Edit previously submitted feedback
-	feedbackID := c.Param("id")         // Get feedback ID from the URL
+	feedbackID := c.Param("feedbackId")         // Get feedback ID from the URL
 	var updatedFeedback models.Feedback // Define an updated feedback variable
 
 	if err := c.BindJSON(&updatedFeedback); err != nil { // Bind the JSON to the updated feedback struct
@@ -112,7 +112,7 @@ func EditFeedback(c *gin.Context) { // Edit previously submitted feedback
 
 // DeleteFeedback: Manages deletion of feedback if necessary
 func DeleteFeedback(c *gin.Context) { // Delete feedback
-	feedbackID := c.Param("id") // Get feedback ID from the URL
+	feedbackID := c.Param("feedbackId") // Get feedback ID from the URL
 
 	objectFeedbackID, err := primitive.ObjectIDFromHex(feedbackID) // Convert feedback ID to ObjectID
 	if err != nil {                                                // Check if there is an error converting the ID
