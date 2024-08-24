@@ -45,10 +45,10 @@ func LoadConfig() *Config {
 		log.Fatal("JWT_SECRET_KEY environment variable is required") // Log an error message if the JWT_SECRET_KEY is not set
 	}
 
-	log.Println("Mongo URI:", mongoURI)
-	log.Println("Database Name:", databaseName)
-	log.Println("Server Port:", serverPort)
-	log.Println("JWT Secret Key:", jwtSecretKey)
+	log.Println("Mongo URI:", mongoURI) // Log the MongoDB URI
+	log.Println("Database Name:", databaseName) // Log the database name
+	log.Println("Server Port:", serverPort) // Log the server port
+	log.Println("JWT Secret Key:", jwtSecretKey) // Log the JWT secret key
 
 	return &Config{
 		ServerPort:   serverPort,

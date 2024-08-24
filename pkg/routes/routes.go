@@ -22,8 +22,8 @@ func SetupRoutes(r *gin.Engine) { // SetupRoutes function to define the routes
 	protected.Use(middleware.AuthMiddleware()) // Use the AuthMiddleware to authenticate requests
 
 	// Add routes for sessions
-	protected.POST("/sessions", controllers.CreateSession)                                              // Define a route to create a new session
-	protected.PUT("/sessions/:sessionId", controllers.UpdateSession)                                    // Define a route to update a session
+	protected.POST("/sessions/create", controllers.CreateSession)                                              // Define a route to create a new session
+	protected.PUT("/sessions/:sessionId/update", controllers.UpdateSession)                                    // Define a route to update a session
 	protected.GET("/sessions", controllers.GetSessions)                                                 // Define a route to get all sessions
 	protected.GET("/sessions/active", controllers.GetActiveSessions)                                    // Define a route to get all active sessions
 	protected.GET("/sessions/:sessionId", controllers.GetSessionByID)                                   // Define a route to get a session by ID

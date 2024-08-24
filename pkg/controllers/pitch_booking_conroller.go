@@ -17,7 +17,7 @@ var (
 )
 
 // InitializePitchBookingController initializes the pitch booking controller
-func InitializePitchBookingController(database *mongo.Database) {
+func InitializePitchBooking(database *mongo.Database) {
 	pitchBookingCollection = database.Collection("pitch_bookings") // Set the pitch booking collection
 }
 

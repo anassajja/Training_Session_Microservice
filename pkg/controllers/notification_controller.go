@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"time"
 	"training_session/pkg/models"
@@ -14,15 +15,35 @@ import (
 
 var notificationCollection *mongo.Collection // Global notification collection
 
-func InitializeNotificationController(database *mongo.Database) { // Initialize the notification controller
-	userCollection = database.Collection("users")                 // Set the user collection
-	notificationCollection = database.Collection("notifications") // Set the notification collection
+func InitializeNotification(database *mongo.Database) { // Initialize the notification controller
+    if database == nil { // Check if the database is nil
+        log.Println("Error: database is not initialized") // Log an error message
+        return
+    }
+    // Initialize the collection
+    notificationCollection = database.Collection("notifications") // Initialize the notification collection
+    log.Println("notificationCollection initialized successfully") // Log a success message
 }
 
 // SendSessionNotification: Sends notifications to users about session changes or updates.
-func SendSessionNotification(notification models.Notification) error { // Send a notification to a user about a session change or update
-	_, err := notificationCollection.InsertOne(context.TODO(), notification) // Insert the notification into the database and check for errors
-	return err                                                               // Return the error
+func SendSessionNotification(notification models.Notification) error { // Send a session notification
+	// Ensure that notificationCollection is initialized
+	if notificationCollection == nil { // Check if the notificationCollection is nil
+		log.Println("Error: notificationCollection is not initialized") // Log an error message
+		return mongo.ErrNilDocument                                     // Return a nil document error
+	}
+
+	// Insert the notification into the MongoDB collection
+	_, err := notificationCollection.InsertOne(context.TODO(), notification) // Insert the notification
+	if err != nil {                                                          // Check if there is an error
+		// Log the error and return it
+		log.Printf("Failed to insert session notification: %v\n", err) // Log the error message
+		return err                                                     // Return the error
+	}
+
+	// Log success for debugging
+	log.Println("Session notification sent successfully") // Log the success message
+	return nil                                            // Return nil
 }
 
 // User Notification: Sends notifications to users about invitations, changes, and updates.

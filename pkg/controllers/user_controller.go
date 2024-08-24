@@ -78,46 +78,60 @@ func RegisterUser(c *gin.Context) { // Create a user
 
 func LoginUser(c *gin.Context) {
 	var user models.User
-	if err := c.BindJSON(&user); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := c.ShouldBindJSON(&user); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
 	}
 
-	var existingUser models.User
-	err := userCollection.FindOne(context.TODO(), bson.M{"email": user.Email}).Decode(&existingUser)
+	// Retrieve the user from the database
+	var foundUser models.User
+	err := userCollection.FindOne(context.TODO(), bson.M{"email": user.Email}).Decode(&foundUser)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
 		return
 	}
 
-	err = bcrypt.CompareHashAndPassword([]byte(existingUser.Password), []byte(user.Password))
+	// Check if the password is correct (use proper hashing in production)
+	err = bcrypt.CompareHashAndPassword([]byte(foundUser.Password), []byte(user.Password))
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 		return
 	}
 
+	// Create JWT token with the correct user ID
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"id":  user.ID.Hex(),
-		"exp": time.Now().Add(time.Hour * 2).Unix(),
+		"id":  foundUser.ID.Hex(), // Convert ObjectID to hex string
+		"exp": time.Now().Add(time.Hour * 72).Unix(),
 	})
 
+	// Sign and get the complete encoded token as a string using the secret
 	tokenString, err := token.SignedString([]byte(cfg.JwtSecretKey))
 	if err != nil {
-		log.Printf("Error generating token: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not generate token"})
 		return
 	}
 
 	c.SetCookie("auth_token", tokenString, int(time.Hour*2), "/", "", false, true)
 	c.JSON(http.StatusOK, gin.H{
-		"user":  existingUser,
+		"user":  foundUser,
 		"token": tokenString,
 	})
 }
 
-func LogoutUser(c *gin.Context) { // Logout a user by clearing the auth token cookie
-	c.SetCookie("auth_token", "", -1, "/", "", false, true)                 // Clear the auth token cookie by setting it to an empty value and setting the expiration to -1
-	c.JSON(http.StatusOK, gin.H{"message": "User logged out successfully"}) // Return a success response with a message
+func LogoutUser(c *gin.Context) { // Logout a user
+	// Clear the auth token cookie by setting it to an empty value and setting the expiration to -1
+	c.SetCookie("auth_token", "", -1, "/", "", false, true) // Clear the auth token cookie
+
+	// Log the logout action for debugging and auditing purposes
+	userID, _ := c.Get("userID") // Retrieve the user ID from context (assuming it's set by authentication middleware)
+	if userID != nil {           // Check if the user ID is not nil
+		log.Printf("User %s logged out successfully", userID) // Log the user ID
+	} else {
+		log.Println("Anonymous user logged out") // Log a message for anonymous users
+	}
+
+	// Return a success response with a message
+	c.JSON(http.StatusOK, gin.H{"message": "User logged out successfully"}) // Return a success response
 }
 
 func GetUserByID(c *gin.Context) { // Get a user by ID

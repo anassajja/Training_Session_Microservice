@@ -155,14 +155,14 @@ func GetSessionsByUserID(c *gin.Context) { // Get all sessions created by a user
 	c.JSON(http.StatusOK, sessions) // Return a success response
 }
 
-func CreateSession(c *gin.Context) {
-	if sessionCollection == nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "MongoDB session collection is not initialized",
+func CreateSession(c *gin.Context) { // Create a session
+	if sessionCollection == nil { // Check if the session collection is not initialized
+		c.JSON(http.StatusInternalServerError, gin.H{ // Return an internal server error response
+			"error": "MongoDB session collection is not initialized", // Return an error message
 		})
-		return
+		return // Return from the function
 	}
-	log.Printf("JWT Secret: %s", cfg.JwtSecretKey)
+	log.Printf("JWT Secret: %s", cfg.JwtSecretKey) // Log the JWT secret key for debugging
 
 	tokenString, err := c.Cookie("auth_token")
 	if err != nil {
@@ -203,12 +203,17 @@ func CreateSession(c *gin.Context) {
 		return
 	}
 
-	var user models.User // Define a user variable to store the user details from the database collection
-	err = userCollection.FindOne(context.TODO(), bson.M{"_id": userID}).Decode(&user) // Find the user by ID and decode the result
-	if err != nil { 																 // Check if there is an error
+	log.Printf("User ID from token: %s", userID.Hex()) // Log the user ID from the token for debugging
+
+	var user models.User
+	err = userCollection.FindOne(context.TODO(), bson.M{"_id": userID}).Decode(&user) // Find the user by ID from the token claims
+	if err != nil {                                                                   // Check if there is an error finding the user
+		log.Printf("Error retrieving user: %v", err)                      // Log error details
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"}) // Return an unauthorized response with an error message
-		return 																	 // Return from the function
+		return
 	}
+
+	log.Printf("Searching for user with ID: %s", userID.Hex()) // Log the user ID for debugging
 
 	if user.Role != "coach" && user.Role != "business owner" {
 		c.JSON(http.StatusForbidden, gin.H{
@@ -247,13 +252,17 @@ func CreateSession(c *gin.Context) {
 		UpdatedAt: time.Now(),
 	}
 
-	err = SendSessionNotification(notification)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send notification"})
-		return
+	err = SendSessionNotification(notification) // Send the session notification
+	if err != nil { 						   // Check if there is an error sending the notification
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send notification"}) // Return an error response
+		return 																			   // Return from the function
 	}
 
-	c.JSON(http.StatusCreated, session)
+	c.JSON(http.StatusCreated, gin.H{ // Return a created response
+		"message":    "Session created successfully", // Return a success message
+		"notification_sent": true, 				   // Return a notification sent status
+		"session":    session, 						   // Return the created session
+	}) // Return the created session and success message
 }
 
 // UpdateSession: Updates a session and sends a notification to the creator

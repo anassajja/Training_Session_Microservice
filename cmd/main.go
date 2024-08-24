@@ -27,6 +27,10 @@ func main() {
 	// Initialize controllers with the database connection
 	controllers.InitializeSession(database) // Initialize the controllers
 	controllers.InitializeUser(database)    // Initialize the controllers
+	controllers.InitializeInvitation(database)
+	controllers.InitializeNotification(database)
+	controllers.InitializeFeedbackController(database)
+	controllers.InitializePitchBooking(database)
 
 	// Set up routes and start the server
 	r := gin.Default()    // Create a new Gin router
