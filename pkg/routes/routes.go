@@ -2,6 +2,7 @@ package routes
 
 import ( // Import the required packages
 	"training_session/pkg/controllers"
+	"training_session/pkg/middleware"
 
 	"github.com/gin-gonic/gin"
 )
@@ -11,20 +12,25 @@ func SetupRoutes(r *gin.Engine) { // SetupRoutes function to define the routes
 	r.GET("/users", controllers.GetUsers)              // Define a route to get all users
 	r.GET("/users/:userId", controllers.GetUserByID)   // Define a route to get a user by ID
 	r.POST("/users", controllers.RegisterUser)         // Define a route to register a new user
+	r.POST("/users/login", controllers.LoginUser)      // Define a route to login a user
 	r.PUT("/users/:userId", controllers.UpdateUser)    // Define a route to update a user
 	r.DELETE("/users/:userId", controllers.DeleteUser) // Define a route to delete a user
 
+	// Protected routes with authentication middleware
+	protected := r.Group("/")
+	protected.Use(middleware.AuthMiddleware()) // Use the AuthMiddleware to authenticate requests
+
 	// Add routes for sessions
-	r.POST("/sessions", controllers.CreateSession)                                              // Define a route to create a new session
-	r.PUT("/sessions/:sessionId", controllers.UpdateSession)                                    // Define a route to update a session
-	r.GET("/sessions", controllers.GetSessions)                                                 // Define a route to get all sessions
-	r.GET("/sessions/active", controllers.GetActiveSessions)                                    // Define a route to get all active sessions
-	r.GET("/sessions/:sessionId", controllers.GetSessionByID)                                   // Define a route to get a session by ID
-	r.GET("/sessions/user/:userId", controllers.GetSessionsByUserID)                            // Define a route to get all sessions by a user ID
-	r.POST("/sessions/:sessionId/user/:userId/enroll", controllers.EnrollInSession)             // Define a route to enroll in a session
-	r.POST("/sessions/:sessionId/user/:userId/cancel-enrollment", controllers.CancelEnrollment) // Define a route to cancel enrollment in a session
-	r.POST("/sessions/:sessionId/cancel", controllers.CancelSession)                            // Define a route to cancel a session
-	r.POST("/sessions/:sessionId/archive", controllers.ArchiveSession)                          // Define a route to archive a session
+	protected.POST("/sessions", controllers.CreateSession)                                              // Define a route to create a new session
+	protected.PUT("/sessions/:sessionId", controllers.UpdateSession)                                    // Define a route to update a session
+	protected.GET("/sessions", controllers.GetSessions)                                                 // Define a route to get all sessions
+	protected.GET("/sessions/active", controllers.GetActiveSessions)                                    // Define a route to get all active sessions
+	protected.GET("/sessions/:sessionId", controllers.GetSessionByID)                                   // Define a route to get a session by ID
+	protected.GET("/sessions/user/:userId", controllers.GetSessionsByUserID)                            // Define a route to get all sessions by a user ID
+	protected.POST("/sessions/:sessionId/user/:userId/enroll", controllers.EnrollInSession)             // Define a route to enroll in a session
+	protected.POST("/sessions/:sessionId/user/:userId/cancel-enrollment", controllers.CancelEnrollment) // Define a route to cancel enrollment in a session
+	protected.POST("/sessions/:sessionId/cancel", controllers.CancelSession)                            // Define a route to cancel a session
+	protected.POST("/sessions/:sessionId/archive", controllers.ArchiveSession)                          // Define a route to archive a session
 
 	// Add routes for invitations
 	r.POST("/invitations", controllers.SendInvitation)                          // Define a route to send an invitation

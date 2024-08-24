@@ -47,5 +47,6 @@ func LoadConfig() *Config { // Load the configuration
 		ServerPort:   serverPort,
 		MongoURI:     mongoURI,
 		DatabaseName: databaseName,
+		
 	}
 }

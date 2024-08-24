@@ -6,6 +6,7 @@ import (
 	"time"
 	"training_session/pkg/models"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -14,7 +15,8 @@ import (
 )
 
 var (
-	userCollection *mongo.Collection // Define a userCollection variable
+	userCollection *mongo.Collection           // Define a userCollection variable
+	jwtSecret      = []byte("your_secret_key") // Replace with your secret key
 )
 
 func InitializeUser(database *mongo.Database) { // Initialize the controllers
@@ -66,6 +68,48 @@ func RegisterUser(c *gin.Context) { // Create a user
 		return                                                              // Return from the function
 	}
 	c.JSON(http.StatusCreated, user) // Return the created user
+}
+
+func LoginUser(c *gin.Context) { // Login a user with email and password
+	var user models.User                      // Define a user variable to store the request body (email and password)
+	if err := c.BindJSON(&user); err != nil { // Bind the JSON to the user struct (email and password)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}) // Return a bad request response if the JSON is invalid
+		return                                                     // Return from the function if there is an error binding the JSON
+	}
+
+	var existingUser models.User                                                                     // Define an existingUser variable
+	err := userCollection.FindOne(context.TODO(), bson.M{"email": user.Email}).Decode(&existingUser) // Find the user by email
+	if err != nil {                                                                                  // Check if there is an error
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"}) // Return a not found response
+		return                                                        // Return from the function
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(existingUser.Password), []byte(user.Password)) // Compare the hashed password
+	if err != nil {                                                                           // Check if the passwords do not match
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"}) // Return an unauthorized response
+		return                                                                 // Return from the function
+	}
+
+	// Generate JWT token with user claims (payload)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{ // Create a new JWT token with the user claims (payload)
+		"id":    existingUser.ID.Hex(),                // Set the user ID as the token subject (sub)
+		"email": existingUser.Email,                   // Set the user email as a claim (email)
+		"exp":   time.Now().Add(time.Hour * 2).Unix(), // Token expires in 2 hours (expiration time)
+	})
+
+	tokenString, err := token.SignedString(jwtSecret) // Sign the token with the secret key and get the string representation of the token (JWT)
+	if err != nil {                                   // Check if there is an error
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not generate token"}) // Return an error response
+		return                                                                             // Return from the function
+	}
+
+	// Set the token in a cookie with a 2-hour expiration time
+	c.SetCookie("auth_token", tokenString, int(time.Hour*2), "/", "", false, true)
+
+	c.JSON(http.StatusOK, gin.H{ // Return the user and token
+		"user":  existingUser, // Return the user
+		"token": tokenString,  // Return the token
+	})
 }
 
 func GetUserByID(c *gin.Context) { // Get a user by ID
