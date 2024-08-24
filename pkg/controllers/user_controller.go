@@ -26,8 +26,8 @@ func InitializeUser(database *mongo.Database) { // Initialize the controllers
 	sessionCollection = database.Collection("sessions") // Set the session collection
 }
 
-func init() {
-	cfg = config.LoadConfig()
+func init() { // Initialize the configuration
+	cfg = config.LoadConfig() // Load the configuration
 }
 
 func GetUsers(c *gin.Context) { // Get all users
@@ -76,45 +76,45 @@ func RegisterUser(c *gin.Context) { // Create a user
 	c.JSON(http.StatusCreated, user) // Return the created user
 }
 
-func LoginUser(c *gin.Context) {
-	var user models.User
-	if err := c.ShouldBindJSON(&user); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+func LoginUser(c *gin.Context) { // Login a user
+	var user models.User // Define a user variable
+	if err := c.ShouldBindJSON(&user); err != nil { // Bind the JSON to the user struct
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"}) // Return an error response
 		return
 	}
 
 	// Retrieve the user from the database
-	var foundUser models.User
-	err := userCollection.FindOne(context.TODO(), bson.M{"email": user.Email}).Decode(&foundUser)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
-		return
+	var foundUser models.User                                                                     // Define a user variable
+	err := userCollection.FindOne(context.TODO(), bson.M{"email": user.Email}).Decode(&foundUser) // Find the user by email
+	if err != nil {                                                                               // Check if there is an error
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"}) // Return an error response
+		return                                                            // Return from the function
 	}
 
 	// Check if the password is correct (use proper hashing in production)
-	err = bcrypt.CompareHashAndPassword([]byte(foundUser.Password), []byte(user.Password))
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
-		return
+	err = bcrypt.CompareHashAndPassword([]byte(foundUser.Password), []byte(user.Password)) // Compare the hashed password
+	if err != nil {                                                                        // Check if there is an error
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"}) // Return an error response
+		return                                                                 // Return from the function
 	}
 
 	// Create JWT token with the correct user ID
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"id":  foundUser.ID.Hex(), // Convert ObjectID to hex string
-		"exp": time.Now().Add(time.Hour * 72).Unix(),
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{ // Create a new JWT token
+		"id":  foundUser.ID.Hex(),                    // Convert ObjectID to hex string
+		"exp": time.Now().Add(time.Hour * 72).Unix(), // Set the expiration time to 72 hours
 	})
 
 	// Sign and get the complete encoded token as a string using the secret
-	tokenString, err := token.SignedString([]byte(cfg.JwtSecretKey))
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not generate token"})
+	tokenString, err := token.SignedString([]byte(cfg.JwtSecretKey)) // Sign the token with the secret key
+	if err != nil {                                                  // Check if there is an error
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not generate token"}) // Return an error response
 		return
 	}
 
-	c.SetCookie("auth_token", tokenString, int(time.Hour*2), "/", "", false, true)
-	c.JSON(http.StatusOK, gin.H{
-		"user":  foundUser,
-		"token": tokenString,
+	c.SetCookie("auth_token", tokenString, int(time.Hour*2), "/", "", false, true) // Set the auth token cookie
+	c.JSON(http.StatusOK, gin.H{                                                   // Return the user and token
+		"user":  foundUser,   // Return the user
+		"token": tokenString, // Return the token
 	})
 }
 

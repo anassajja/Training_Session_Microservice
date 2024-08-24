@@ -25,12 +25,12 @@ func main() {
 	log.Println("Database initialized successfully") // Add this log message
 
 	// Initialize controllers with the database connection
-	controllers.InitializeSession(database) // Initialize the controllers
-	controllers.InitializeUser(database)    // Initialize the controllers
-	controllers.InitializeInvitation(database)
-	controllers.InitializeNotification(database)
-	controllers.InitializeFeedbackController(database)
-	controllers.InitializePitchBooking(database)
+	controllers.InitializeSession(database)            // Initialize the controllers
+	controllers.InitializeUser(database)               // Initialize the controllers
+	controllers.InitializeInvitation(database)         // Initialize the invitation controller
+	controllers.InitializeNotification(database)       // Initialize the notification controller
+	controllers.InitializeFeedbackController(database) // Initialize the feedback controller
+	controllers.InitializePitchBooking(database)       // Initialize the pitch booking controller
 
 	// Set up routes and start the server
 	r := gin.Default()    // Create a new Gin router
