@@ -2,8 +2,10 @@ package controllers
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"time"
+	"training_session/config"
 	"training_session/pkg/models"
 
 	"github.com/dgrijalva/jwt-go"
@@ -15,13 +17,17 @@ import (
 )
 
 var (
-	userCollection *mongo.Collection           // Define a userCollection variable
-	jwtSecret      = []byte("your_secret_key") // Replace with your secret key
+	userCollection *mongo.Collection // Define a userCollection variable
+	cfg            *config.Config    // Define a config variable
 )
 
 func InitializeUser(database *mongo.Database) { // Initialize the controllers
 	userCollection = database.Collection("users")       // Set the user collection
 	sessionCollection = database.Collection("sessions") // Set the session collection
+}
+
+func init() {
+	cfg = config.LoadConfig()
 }
 
 func GetUsers(c *gin.Context) { // Get all users
@@ -70,46 +76,48 @@ func RegisterUser(c *gin.Context) { // Create a user
 	c.JSON(http.StatusCreated, user) // Return the created user
 }
 
-func LoginUser(c *gin.Context) { // Login a user with email and password
-	var user models.User                      // Define a user variable to store the request body (email and password)
-	if err := c.BindJSON(&user); err != nil { // Bind the JSON to the user struct (email and password)
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}) // Return a bad request response if the JSON is invalid
-		return                                                     // Return from the function if there is an error binding the JSON
+func LoginUser(c *gin.Context) {
+	var user models.User
+	if err := c.BindJSON(&user); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
 	}
 
-	var existingUser models.User                                                                     // Define an existingUser variable
-	err := userCollection.FindOne(context.TODO(), bson.M{"email": user.Email}).Decode(&existingUser) // Find the user by email
-	if err != nil {                                                                                  // Check if there is an error
-		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"}) // Return a not found response
-		return                                                        // Return from the function
+	var existingUser models.User
+	err := userCollection.FindOne(context.TODO(), bson.M{"email": user.Email}).Decode(&existingUser)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
 	}
 
-	err = bcrypt.CompareHashAndPassword([]byte(existingUser.Password), []byte(user.Password)) // Compare the hashed password
-	if err != nil {                                                                           // Check if the passwords do not match
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"}) // Return an unauthorized response
-		return                                                                 // Return from the function
+	err = bcrypt.CompareHashAndPassword([]byte(existingUser.Password), []byte(user.Password))
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+		return
 	}
 
-	// Generate JWT token with user claims (payload)
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{ // Create a new JWT token with the user claims (payload)
-		"id":    existingUser.ID.Hex(),                // Set the user ID as the token subject (sub)
-		"email": existingUser.Email,                   // Set the user email as a claim (email)
-		"exp":   time.Now().Add(time.Hour * 2).Unix(), // Token expires in 2 hours (expiration time)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"id":  user.ID.Hex(),
+		"exp": time.Now().Add(time.Hour * 2).Unix(),
 	})
 
-	tokenString, err := token.SignedString(jwtSecret) // Sign the token with the secret key and get the string representation of the token (JWT)
-	if err != nil {                                   // Check if there is an error
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not generate token"}) // Return an error response
-		return                                                                             // Return from the function
+	tokenString, err := token.SignedString([]byte(cfg.JwtSecretKey))
+	if err != nil {
+		log.Printf("Error generating token: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not generate token"})
+		return
 	}
 
-	// Set the token in a cookie with a 2-hour expiration time
 	c.SetCookie("auth_token", tokenString, int(time.Hour*2), "/", "", false, true)
-
-	c.JSON(http.StatusOK, gin.H{ // Return the user and token
-		"user":  existingUser, // Return the user
-		"token": tokenString,  // Return the token
+	c.JSON(http.StatusOK, gin.H{
+		"user":  existingUser,
+		"token": tokenString,
 	})
+}
+
+func LogoutUser(c *gin.Context) { // Logout a user by clearing the auth token cookie
+	c.SetCookie("auth_token", "", -1, "/", "", false, true)                 // Clear the auth token cookie by setting it to an empty value and setting the expiration to -1
+	c.JSON(http.StatusOK, gin.H{"message": "User logged out successfully"}) // Return a success response with a message
 }
 
 func GetUserByID(c *gin.Context) { // Get a user by ID

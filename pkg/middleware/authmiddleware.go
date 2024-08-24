@@ -1,46 +1,45 @@
 package middleware
 
 import (
+	"log"
 	"net/http"
-	"os"
+	"strings"
+
+	"training_session/config"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
-	"github.com/joho/godotenv"
 )
 
-var jwtSecret []byte // Define a global variable to store the JWT secret key
+var cfg *config.Config
 
-func init() { // Initialize the environment variables and JWT secret key when the package is imported
-	// Load environment variables from .env file
-	err := godotenv.Load() // Load the .env file
-	if err != nil {        // Check if there is an error
-		panic("Error loading .env file") // Panic if there is an error loading the .env file to stop the application
-	}
-
-	// Get the secret key from the environment variables
-	jwtSecret = []byte(os.Getenv("JWT_SECRET_KEY"))
+func init() {
+	cfg = config.LoadConfig()
 }
 
-func AuthMiddleware() gin.HandlerFunc { // AuthMiddleware function to authenticate requests using JWT tokens as middleware for protected routes (e.g., sessions, feedback, notifications)
-	return func(c *gin.Context) { // Return a function that handles the request
-		tokenString := c.GetHeader("Authorization") // Get the token from the Authorization header
-		if tokenString == "" {                      // Check if the token is missing
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing token"}) // Return an error response
-			c.Abort()                                                        // Abort the request
-			return                                                           // Abort the request
+func AuthMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		tokenString := c.GetHeader("Authorization")
+		if tokenString == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing token"})
+			c.Abort()
+			return
 		}
 
-		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) { // Parse the token
-			return jwtSecret, nil // Return the secret key
+		tokenString = strings.TrimPrefix(tokenString, "Bearer ")
+		log.Printf("Token after prefix removal: %s", tokenString)
+
+		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+			return []byte(cfg.JwtSecretKey), nil
 		})
 
-		if err != nil || !token.Valid { // Check if there is an error or the token is invalid
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"}) // Return an error response
-			c.Abort()                                                        // Abort the request
-			return                                                           // Abort the request
+		if err != nil || !token.Valid {
+			log.Printf("Error parsing token: %v", err)
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+			c.Abort()
+			return
 		}
 
-		c.Next() // Continue to the next middleware
+		c.Next()
 	}
 }

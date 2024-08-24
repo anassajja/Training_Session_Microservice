@@ -3,10 +3,11 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
-	"os"
 	"time"
 
+	"training_session/config"
 	"training_session/pkg/models"
 
 	"github.com/dgrijalva/jwt-go"
@@ -17,12 +18,15 @@ import (
 )
 
 var (
-	sessionCollection *mongo.Collection                     // Define a sessionCollection variable
-	JwtSecret         = []byte(os.Getenv("JWT_SECRET_KEY")) // Load the secret key from environment variable JWT_SECRET_KEY
+	sessionCollection *mongo.Collection // Define a sessionCollection variable
 )
 
 func InitializeSession(db *mongo.Database) { // Initialize the controllers
 	sessionCollection = db.Collection("sessions") // Set the session collection
+}
+
+func init() {
+	cfg = config.LoadConfig()
 }
 
 func GetSessions(c *gin.Context) { // Get all sessions
@@ -151,104 +155,105 @@ func GetSessionsByUserID(c *gin.Context) { // Get all sessions created by a user
 	c.JSON(http.StatusOK, sessions) // Return a success response
 }
 
-func CreateSession(c *gin.Context) { // Create a session
-	if sessionCollection == nil { // Check if the session collection is not initialized
-		c.JSON(http.StatusInternalServerError, gin.H{ // Return an error response
-			"error": "MongoDB session collection is not initialized", // Return an error message
+func CreateSession(c *gin.Context) {
+	if sessionCollection == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "MongoDB session collection is not initialized",
 		})
-		return // Return from the function
+		return
+	}
+	log.Printf("JWT Secret: %s", cfg.JwtSecretKey)
+
+	tokenString, err := c.Cookie("auth_token")
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
 	}
 
-	// Retrieve token from the cookie
-	tokenString, err := c.Cookie("auth_token") // Get the token from the cookie
-	if err != nil {                            // Check if there is an error
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"}) // Return an unauthorized response
-		return                                                          // Return from the function
-	}
-
-	// Parse and validate the token with the JWT secret key
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) { // Parse the token with the secret key and validate it with the JWT secret key
-		return JwtSecret, nil // Return the JWT secret key and no error if the token is valid
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		return []byte(cfg.JwtSecretKey), nil
 	})
-	if err != nil || !token.Valid { // Check if there is an error or the token is invalid
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"}) // Return an unauthorized response
-		return                                                           // Return from the function
+
+	if err != nil {
+		log.Printf("Error parsing token: %v", err)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+		return
 	}
 
-	claims, ok := token.Claims.(jwt.MapClaims) // Get the claims from the token
-	if !ok || !token.Valid {                   // Check if the claims are valid
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"}) // Return an unauthorized response
-		return                                                                  // Return from the function
+	if !token.Valid {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+		return
 	}
 
-	userIDHex, ok := claims["id"].(string) // Get the user ID from the claims and convert it to a string
-	if !ok {                               // Check if the user ID is valid
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"}) // Return an unauthorized response
-		return                                                                  // Return from the function
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok || !token.Valid {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
+		return
 	}
 
-	userID, err := primitive.ObjectIDFromHex(userIDHex) // Convert the user ID to an ObjectID
-	if err != nil {                                     // Check if there is an error
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID"}) // Return an unauthorized response
-		return                                                             // Return from the function
+	userIDHex, ok := claims["id"].(string)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
+		return
 	}
 
-	// Retrieve user from the database
-	var user models.User                                                              // Define a user variable
-	err = userCollection.FindOne(context.TODO(), bson.M{"_id": userID}).Decode(&user) // Find the user by ID and decode the result into the user variable in the context provided by the database driver (context.TODO())
-	if err != nil {                                                                   // Check if there is an error
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"}) // Return an unauthorized response
-		return                                                            // Return from the function
+	userID, err := primitive.ObjectIDFromHex(userIDHex)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID"})
+		return
 	}
 
-	// Check if the user has the required role
+	var user models.User // Define a user variable to store the user details from the database collection
+	err = userCollection.FindOne(context.TODO(), bson.M{"_id": userID}).Decode(&user) // Find the user by ID and decode the result
+	if err != nil { 																 // Check if there is an error
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"}) // Return an unauthorized response with an error message
+		return 																	 // Return from the function
+	}
+
 	if user.Role != "coach" && user.Role != "business owner" {
-		c.JSON(http.StatusForbidden, gin.H{ // Return a forbidden response
-			"error": "You do not have the required permissions to create a session", // Return an error message
-		}) // Return a forbidden response
-		return // Return from the function
-	}
-
-	var session models.Session // Define a session variable
-
-	if err := c.ShouldBindJSON(&session); err != nil { // Bind the JSON data to the session variable
-		c.JSON(http.StatusBadRequest, gin.H{ // Return a bad request response
-			"error": err.Error(), // Return the error message
-		}) // Return a bad request response
-		return // Return from the function
-	}
-
-	session.ID = primitive.NewObjectID() // Generate a new ObjectID for the session
-	session.Status = "active"            // Set the status to "active"
-	session.CreatedAt = time.Now()       // Set the created time
-	session.UpdatedAt = time.Now()       // Set the updated time
-
-	_, err = sessionCollection.InsertOne(context.TODO(), session) // Insert the session
-	if err != nil {                                               // Check if there is an error
-		c.JSON(http.StatusInternalServerError, gin.H{ // Return an error response
-			"error": fmt.Sprintf("Failed to create session: %v", err), // Return an error response
+		c.JSON(http.StatusForbidden, gin.H{
+			"error": "You do not have the required permissions to create a session",
 		})
 		return
 	}
 
-	// Notify the users of the session
-	notification := models.Notification{ // Define a notification variable with the required fields
-		ID:        primitive.NewObjectID(), // Generate a new ObjectID for the notification
-		UserID:    user.ID,                 // Set the user ID to notify
+	var session models.Session
+	if err := c.ShouldBindJSON(&session); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	session.ID = primitive.NewObjectID()
+	session.Status = "active"
+	session.CreatedAt = time.Now()
+	session.UpdatedAt = time.Now()
+
+	_, err = sessionCollection.InsertOne(context.TODO(), session)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": fmt.Sprintf("Failed to create session: %v", err),
+		})
+		return
+	}
+
+	notification := models.Notification{
+		ID:        primitive.NewObjectID(),
+		UserID:    user.ID,
 		Type:      "Session Created",
-		Message:   fmt.Sprintf("The session '%s' has been created.", session.Title), // Set the message for the notification
-		CreatedAt: time.Now(),                                                       // Set the created_at timestamp
-		UpdatedAt: time.Now(),                                                       // Set the updated_at timestamp
+		Message:   fmt.Sprintf("The session '%s' has been created.", session.Title),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
 	}
 
-	// Send session notification
-	err = SendSessionNotification(notification) // Send the session notification
-	if err != nil {                             // Check if there is an error
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send notification"}) // Return an error response
-		return                                                                                // Return from the function
+	err = SendSessionNotification(notification)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send notification"})
+		return
 	}
 
-	c.JSON(http.StatusCreated, session) // Return the created session
+	c.JSON(http.StatusCreated, session)
 }
 
 // UpdateSession: Updates a session and sends a notification to the creator

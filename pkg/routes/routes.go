@@ -13,6 +13,7 @@ func SetupRoutes(r *gin.Engine) { // SetupRoutes function to define the routes
 	r.GET("/users/:userId", controllers.GetUserByID)          // Define a route to get a user by ID
 	r.POST("/users/register", controllers.RegisterUser)       // Define a route to register a new user
 	r.POST("/users/login", controllers.LoginUser)             // Define a route to login a user
+	r.POST("/users/logout", controllers.LogoutUser)           // Define a route to logout a user
 	r.PUT("/users/update/:userId", controllers.UpdateUser)    // Define a route to update a user
 	r.DELETE("/users/delete/:userId", controllers.DeleteUser) // Define a route to delete a user
 
